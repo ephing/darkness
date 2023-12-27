@@ -3,6 +3,7 @@ package alpha
 import (
 	"regexp"
 
+	"github.com/BurntSushi/toml"
 	"github.com/thecsw/darkness/yunyun"
 )
 
@@ -28,6 +29,12 @@ type DarknessConfig struct {
 
 	// Website is the website section of the config
 	Website WebsiteConfig `toml:"website"`
+
+	// Providers is the directories of provider libraries
+	Providers map[string]yunyun.RelativePathFile `toml:"providers"`
+
+	// Plugins is the not-yet-decoded toml of custom configs
+	Plugins map[string]toml.Primitive `toml:"plugin"`
 
 	// Runtime holds the state we use during the runtime.
 	Runtime RuntimeConfig `toml:"-"`

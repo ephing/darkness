@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
+	"github.com/thecsw/darkness/emilia/alpha/roxy"
 	"github.com/thecsw/darkness/emilia/puck"
 	"github.com/thecsw/darkness/yunyun"
 	"github.com/thecsw/gana"
@@ -36,7 +37,8 @@ func BuildConfig(options Options) *DarknessConfig {
 	}
 
 	// If we can't decode the config, then exit.
-	_, err = toml.Decode(string(data), &conf)
+	var md toml.MetaData
+	md, err = toml.Decode(string(data), &conf)
 	if err != nil {
 		conf.Runtime.Logger.Fatal("Decoding config", "path", options.DarknessConfig, "err", err)
 	}
@@ -79,6 +81,15 @@ func BuildConfig(options Options) *DarknessConfig {
 		}
 	}
 	conf.Runtime.urlSlice = []string{conf.Url}
+
+	conf.Runtime.PluginConfigs = map[string]*roxy.Provider{}
+	for provider, path := range conf.Providers {
+		prv, err := roxy.RegisterPlugin(conf.Runtime.Join(path), md, conf.Plugins[provider])
+		if err != nil {
+			conf.Runtime.Logger.Fatal("Loading plugin", "path", options.DarknessConfig, "err", err)
+		}
+		conf.Runtime.PluginConfigs[provider] = prv
+	}
 
 	// Set up the custom highlight languages if they exist.
 	conf.setupHighlightJsLanguages()

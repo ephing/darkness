@@ -4,6 +4,7 @@ import (
 	"net/url"
 
 	l "github.com/charmbracelet/log"
+	"github.com/thecsw/darkness/emilia/alpha/roxy"
 )
 
 // WorkingDirectory is the directory of where darkness project lives.
@@ -34,4 +35,7 @@ type RuntimeConfig struct {
 
 	// Logger is the logger that we use.
 	Logger *l.Logger
+
+	// PluginConfigs contains the configs from shared libraries
+	PluginConfigs map[string]*roxy.Provider
 }

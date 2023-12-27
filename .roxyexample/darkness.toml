@@ -1,0 +1,15 @@
+title = "Roxy example for testing while developing"
+
+[website]
+
+[project]
+input = ".org"
+output = ".html"
+
+[providers]
+custom = "../custom.so"
+
+[plugin.custom]
+head = "test"
+tail = 69
+
