@@ -85,7 +85,7 @@ func BuildConfig(options Options) *DarknessConfig {
 	// Register plugins and decode their configs
 	conf.Runtime.PluginConfigs = []*roxy.Provider{}
 	for provider, path := range conf.Providers {
-		prv, err := roxy.AlphaRegisterPlugin(conf.Runtime.Join(path), md, conf.Plugins[provider])
+		prv, err := roxy.RegisterPlugin(conf.Runtime.Join(path), md, conf.Plugins[provider])
 		if err != nil {
 			conf.Runtime.Logger.Fatal("Loading plugin", "path", options.DarknessConfig, "err", err)
 		}
