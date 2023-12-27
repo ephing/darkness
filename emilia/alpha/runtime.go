@@ -37,5 +37,5 @@ type RuntimeConfig struct {
 	Logger *l.Logger
 
 	// PluginConfigs contains the configs from shared libraries
-	PluginConfigs map[string]*roxy.Provider
+	PluginConfigs []*roxy.Provider
 }

@@ -10,6 +10,5 @@ output = ".html"
 custom = "../custom.so"
 
 [plugin.custom]
-head = "test"
-tail = 69
+flag = true
 

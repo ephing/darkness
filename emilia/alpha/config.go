@@ -82,13 +82,14 @@ func BuildConfig(options Options) *DarknessConfig {
 	}
 	conf.Runtime.urlSlice = []string{conf.Url}
 
-	conf.Runtime.PluginConfigs = map[string]*roxy.Provider{}
+	// Register plugins and decode their configs
+	conf.Runtime.PluginConfigs = []*roxy.Provider{}
 	for provider, path := range conf.Providers {
-		prv, err := roxy.RegisterPlugin(conf.Runtime.Join(path), md, conf.Plugins[provider])
+		prv, err := roxy.AlphaRegisterPlugin(conf.Runtime.Join(path), md, conf.Plugins[provider])
 		if err != nil {
 			conf.Runtime.Logger.Fatal("Loading plugin", "path", options.DarknessConfig, "err", err)
 		}
-		conf.Runtime.PluginConfigs[provider] = prv
+		conf.Runtime.PluginConfigs = append(conf.Runtime.PluginConfigs, prv)
 	}
 
 	// Set up the custom highlight languages if they exist.

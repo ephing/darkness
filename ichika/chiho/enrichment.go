@@ -2,6 +2,7 @@ package chiho
 
 import (
 	"github.com/thecsw/darkness/emilia/alpha"
+	"github.com/thecsw/darkness/emilia/alpha/roxy"
 	"github.com/thecsw/darkness/emilia/narumi"
 	"github.com/thecsw/darkness/emilia/puck"
 	"github.com/thecsw/darkness/yunyun"
@@ -15,9 +16,10 @@ import (
 // - Source code trimmed left whitespace
 // - Syntax highlighting
 // - Lazy galleries
+// - Plugins
 func EnrichPage(conf *alpha.DarknessConfig, page *yunyun.Page) *yunyun.Page {
 	defer puck.Stopwatch("Enriched", "page", page.File).Record()
-	return page.Options(
+	options := []yunyun.PageOption{
 		narumi.WithResolvedComments(),
 		narumi.WithEnrichedHeadings(),
 		narumi.WithFootnotes(),
@@ -25,5 +27,7 @@ func EnrichPage(conf *alpha.DarknessConfig, page *yunyun.Page) *yunyun.Page {
 		narumi.WithSourceCodeTrimmedLeftWhitespace(),
 		narumi.WithSyntaxHighlighting(conf),
 		narumi.WithLazyGalleries(conf),
-	)
+	}
+	options = append(options, roxy.FormatForChiho(conf.Runtime.PluginConfigs, conf)...)
+	return page.Options(options...)
 }
