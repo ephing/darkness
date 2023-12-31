@@ -1,5 +1,7 @@
 package roxy
 
+import "github.com/thecsw/darkness/yunyun"
+
 type PluginKind string
 
 const (
@@ -25,9 +27,6 @@ type PluginConfigInterface interface {
 		In order to actually assign to the underlying struct, `Set` has to type check the values
 	*/
 	Set(map[string]any) error
-
-	// Gets the value at a certain key
-	Get(string) (any, error)
 }
 
 type PluginError struct {
@@ -37,3 +36,7 @@ type PluginError struct {
 func (pe PluginError) Error() string {
 	return pe.Msg
 }
+
+type Init = (func(map[string]any) (PluginConfigInterface, error))
+type ChihoDo = (func(PluginConfigInterface, interface{}) yunyun.PageOption)
+type MisaDo = (func(PluginConfigInterface, interface{}, bool) error)

@@ -11,4 +11,6 @@ custom = "../custom.so"
 
 [plugin.custom]
 flag = true
-
+[plugin.custom.submap]
+thing = 1
+thing2 = 6

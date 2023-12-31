@@ -9,7 +9,6 @@ import (
 	"github.com/thecsw/darkness/emilia/alpha/roxy"
 	"github.com/thecsw/darkness/emilia/puck"
 	"github.com/thecsw/darkness/ichika/misa"
-	"github.com/thecsw/darkness/yunyun"
 )
 
 // MisaCommandFunc will support many different tools that darkness can support,
@@ -23,8 +22,8 @@ func MisaCommandFunc() {
 	rss := misaCmd.String("rss", "", "generate an rss file")
 	rssDirectories := misaCmd.String("rss-dirs", "", "look up specific dirs")
 	dryRun := misaCmd.Bool("dry-run", false, "skip writing files (but do the reading)")
-	pluginLoc := ""
-	misaCmd.StringVar(&pluginLoc, "plugin", "", "execute a plugin using misa")
+	pluginName := ""
+	misaCmd.StringVar(&pluginName, "plugin", "", "execute a misa plugin")
 
 	options := getAlphaOptions(misaCmd)
 	options.Dev = true
@@ -52,11 +51,15 @@ func MisaCommandFunc() {
 		misa.GenerateRssFeed(conf, *rss, strings.Split(*rssDirectories, ","), *dryRun)
 		os.Exit(0)
 	}
-	if pluginLoc != "" {
-		rpath := yunyun.RelativePathFile(pluginLoc)
-		if err := roxy.DoMisaPlugin(conf.Runtime.Join(rpath), conf, *dryRun); err != nil {
-			puck.Logger.Error(err)
+	if pluginName != "" {
+		if plgn, ok := conf.Runtime.PluginConfigs[pluginName]; ok {
+			err := plgn.Do.(roxy.MisaDo)(plgn.Data, conf, *dryRun)
+			if err != nil {
+				puck.Logger.Error(err)
+			}
+			os.Exit(0)
 		}
+		puck.Logger.Fatalf("Plugin \"%s\" does not exist", pluginName)
 		os.Exit(0)
 	}
 

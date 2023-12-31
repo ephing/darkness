@@ -8,9 +8,6 @@ import (
 )
 
 type Provider struct {
-	// Name is the name of the plugin
-	Name string
-
 	// Kind defines where the plugin should have an affect (e.g. Chiho, Misa)
 	Kind PluginKind
 
@@ -24,34 +21,21 @@ type Provider struct {
 		when the plugin is registered
 	*/
 	Do interface{}
+
+	// For extra info not used across all plugin kinds
+	Extra interface{}
 }
 
 // Just for organizing the information collected from the plugin
 type pluginMembers struct {
-	name       *string
 	pluginkind *PluginKind
 	init       func(map[string]any) (PluginConfigInterface, error)
 	do         interface{}
-}
-
-// Get name of plugin
-func (pm *pluginMembers) getName(path yunyun.FullPathFile, plug *plugin.Plugin) error {
-	symName, err := plug.Lookup("Name")
-	if err != nil {
-		return err
-	}
-	var ok bool
-	pm.name, ok = symName.(*string)
-	if !ok {
-		return PluginError{
-			Msg: `Invalid valid type for Name in plugin "` + string(path) + ". Expected: string",
-		}
-	}
-	return nil
+	extra      interface{}
 }
 
 // Get kind of plugin
-func (pm *pluginMembers) getKind(plug *plugin.Plugin) error {
+func (pm *pluginMembers) getKind(plug *plugin.Plugin, name string) error {
 	symType, err := plug.Lookup("PluginType")
 	if err != nil {
 		return err
@@ -61,7 +45,7 @@ func (pm *pluginMembers) getKind(plug *plugin.Plugin) error {
 		pstype, ok := symType.(*string)
 		if !ok {
 			return PluginError{
-				Msg: "Invalid type for PluginType in plugin " + *pm.name + ". Expected {roxy.PluginKind, string}",
+				Msg: "Invalid type for PluginType in plugin " + name + ". Expected {roxy.PluginKind, string}",
 			}
 		}
 		pm.pluginkind = (*PluginKind)(pstype)
@@ -72,7 +56,7 @@ func (pm *pluginMembers) getKind(plug *plugin.Plugin) error {
 }
 
 // Verifies the contents of a plugin and its config
-func RegisterPlugin(path yunyun.FullPathFile, md toml.MetaData, prim toml.Primitive) (*Provider, error) {
+func RegisterPlugin(path yunyun.FullPathFile, name string, md toml.MetaData, prim toml.Primitive) (*Provider, error) {
 	// Attempt to open shared library file
 	plug, err := plugin.Open(string(path))
 	if err != nil {
@@ -82,11 +66,7 @@ func RegisterPlugin(path yunyun.FullPathFile, md toml.MetaData, prim toml.Primit
 	plmem := &pluginMembers{}
 	var ok bool
 
-	if err := plmem.getName(path, plug); err != nil {
-		return nil, err
-	}
-
-	if err := plmem.getKind(plug); err != nil {
+	if err := plmem.getKind(plug, name); err != nil {
 		return nil, err
 	}
 
@@ -95,10 +75,10 @@ func RegisterPlugin(path yunyun.FullPathFile, md toml.MetaData, prim toml.Primit
 	if err != nil {
 		return nil, err
 	}
-	plmem.init, ok = symInit.(func(map[string]any) (PluginConfigInterface, error))
+	plmem.init, ok = symInit.(Init)
 	if !ok {
 		return nil, PluginError{
-			Msg: "Invalid signature for Init of plugin " + *plmem.name +
+			Msg: "Invalid signature for Init of plugin " + name +
 				". Expected: func(map[string]any) (roxy.PluginConfigInterface, error)",
 		}
 	}
@@ -122,12 +102,25 @@ func RegisterPlugin(path yunyun.FullPathFile, md toml.MetaData, prim toml.Primit
 		if err != nil {
 			return nil, err
 		}
-		// see if its an html insertion function
-		plmem.do, ok = symDo.(func(PluginConfigInterface, interface{}) yunyun.PageOption)
+		// see if its a chiho do function
+		plmem.do, ok = symDo.(ChihoDo)
 		if !ok {
 			return nil, PluginError{
-				Msg: "Invalid signature for Do function in plugin " + *plmem.name +
+				Msg: "Invalid signature for Do function in plugin " + name +
 					". Expected: func(roxy.PluginConfigInterface, interface{}) yunyun.PageOption",
+			}
+		}
+	case MisaPlugin:
+		symDo, err := plug.Lookup("Do")
+		if err != nil {
+			return nil, err
+		}
+		// see if its a misado function
+		plmem.do, ok = symDo.(MisaDo)
+		if !ok {
+			return nil, PluginError{
+				Msg: "Invalid signature for Do function in plugin " + name +
+					". Expected: func(roxy.PluginConfigInterface, interface{}, bool) error",
 			}
 		}
 	default:
@@ -135,47 +128,8 @@ func RegisterPlugin(path yunyun.FullPathFile, md toml.MetaData, prim toml.Primit
 	}
 
 	return &Provider{
-		Name: *plmem.name,
 		Kind: *plmem.pluginkind,
 		Data: tomlinit,
 		Do:   plmem.do,
 	}, err
-}
-
-// Misa plugin
-func DoMisaPlugin(path yunyun.FullPathFile, conf interface{}, dryRun bool) error {
-	// Attempt to open shared library file
-	plug, err := plugin.Open(string(path))
-	if err != nil {
-		return err
-	}
-
-	plmem := &pluginMembers{}
-
-	if err := plmem.getName(path, plug); err != nil {
-		return err
-	}
-
-	if err := plmem.getKind(plug); err != nil {
-		return err
-	}
-	if *plmem.pluginkind != MisaPlugin {
-		return PluginError{Msg: string(*plmem.pluginkind) + "s cannot be executed with Misa"}
-	}
-
-	// get do
-	plmem.do, err = plug.Lookup("Do")
-	if err != nil {
-		return err
-	}
-	do, ok := plmem.do.(func(interface{}, bool) error)
-	if !ok {
-		return PluginError{
-			Msg: "Invalid signature for Do function in plugin " + *plmem.name +
-				". Expected: func(interface{}, bool) error",
-		}
-	}
-
-	// execute do
-	return do(conf, dryRun)
 }
