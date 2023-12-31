@@ -5,8 +5,9 @@ import "github.com/thecsw/darkness/yunyun"
 type PluginKind string
 
 const (
-	ChihoPlugin PluginKind = `chihoPlugin`
-	MisaPlugin  PluginKind = `misaPlugin`
+	ChihoPlugin      PluginKind = `chihoPlugin`
+	MisaPlugin       PluginKind = `misaPlugin`
+	HTMLExportPlugin PluginKind = `htmlExportPlugin`
 )
 
 /*
@@ -40,3 +41,4 @@ func (pe PluginError) Error() string {
 type Init = (func(map[string]any) (PluginConfigInterface, error))
 type ChihoDo = (func(PluginConfigInterface, interface{}) yunyun.PageOption)
 type MisaDo = (func(PluginConfigInterface, interface{}, bool) error)
+type HTMLExportDo = (func(PluginConfigInterface, interface{}) string)

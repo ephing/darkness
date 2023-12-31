@@ -97,12 +97,12 @@ func RegisterPlugin(path yunyun.FullPathFile, name string, md toml.MetaData, pri
 	// Differing symbols based on plugin kind
 	switch *plmem.pluginkind {
 	case ChihoPlugin:
-		// get the do function
 		symDo, err := plug.Lookup("Do")
 		if err != nil {
 			return nil, err
 		}
 		// see if its a chiho do function
+
 		plmem.do, ok = symDo.(ChihoDo)
 		if !ok {
 			return nil, PluginError{
@@ -123,13 +123,42 @@ func RegisterPlugin(path yunyun.FullPathFile, name string, md toml.MetaData, pri
 					". Expected: func(roxy.PluginConfigInterface, interface{}, bool) error",
 			}
 		}
+	case HTMLExportPlugin:
+		exportFuncs := map[string]HTMLExportDo{}
+		extras := map[HTMLExportLocation]bool{}
+		// header modification
+		symDo, err := plug.Lookup("DoHeader")
+		if err == nil {
+			// check type
+			exportFuncs[AuthorHeader], ok = symDo.(HTMLExportDo)
+			if !ok {
+				return nil, PluginError{
+					Msg: "Invalid signature for Do function in plugin " + name +
+						". Expected: func(roxy.PluginConfigInterface, interface{}) string",
+				}
+			}
+			extras[AuthorHeader] = true
+		}
+
+		// Different export locations can be defined in separate functions in the plugin
+		// Roxy currently doesn't support alternate export locations, but if she did,
+		// their functions would be looked up here. Doing it this way means a plugin
+		// can export at multiple locations
+
+		if len(exportFuncs) == 0 {
+			return nil, PluginError{Msg: "Plugin " + name + " does not define any export functions!"}
+		}
+
+		plmem.do = exportFuncs
+		plmem.extra = extras
 	default:
 		return nil, PluginError{Msg: string(*plmem.pluginkind) + "s cannot be used in darkness.toml"}
 	}
 
 	return &Provider{
-		Kind: *plmem.pluginkind,
-		Data: tomlinit,
-		Do:   plmem.do,
+		Kind:  *plmem.pluginkind,
+		Data:  tomlinit,
+		Do:    plmem.do,
+		Extra: plmem.extra,
 	}, err
 }

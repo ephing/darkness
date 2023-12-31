@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/thecsw/darkness/emilia/alpha/roxy"
 	"github.com/thecsw/darkness/emilia/puck"
 	"github.com/thecsw/darkness/ichika/akane"
 	"github.com/thecsw/darkness/yunyun"
@@ -225,6 +226,15 @@ func (e *state) authorHeader() string {
 </div>
 <div id="hetime" class="menu"></div>
 </div>`
+
+	plugins := roxy.FormatForHTMLExport(e.conf.Runtime.PluginConfigs, roxy.AuthorHeader)
+	for _, p := range plugins {
+		funcMap := p.Do.(map[string]roxy.HTMLExportDo)
+		if do, ok := funcMap[roxy.AuthorHeader]; ok {
+			content += do(p.Data, e.conf)
+		}
+
+	}
 	// Return the website header.
 	return content
 }

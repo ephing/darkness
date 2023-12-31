@@ -12,3 +12,23 @@ func FormatForChiho(plugins map[string]*Provider, conf interface{}) (formatted [
 	}
 	return
 }
+
+type HTMLExportLocation = string
+
+const (
+	AuthorHeader HTMLExportLocation = `header`
+)
+
+// filters out non-HTMLExport plugins and plugins of the wrong location
+func FormatForHTMLExport(plugins map[string]*Provider, location HTMLExportLocation) (formatted []*Provider) {
+	for _, plgn := range plugins {
+		if plgn.Kind != HTMLExportPlugin {
+			continue
+		}
+		extras := plgn.Extra.(map[string]HTMLExportLocation)
+		if _, ok := extras[location]; ok {
+			formatted = append(formatted, plgn)
+		}
+	}
+	return
+}
