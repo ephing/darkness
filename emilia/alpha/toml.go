@@ -141,6 +141,9 @@ type NavigationConfig struct {
 
 	// Hide is the path where to hide the element
 	Hide yunyun.RelativePathDir `toml:"hide"`
+
+	// Will hide the element if this value is encountered.
+	HideIf yunyun.RelativePathDir `toml:"hide_if"`
 }
 
 // RSSConfig is for filling out rss stuff.
@@ -187,6 +190,14 @@ type RSSConfig struct {
 	//
 	// Example: "<category>Newspapers</category>"
 	Category string `toml:"category"`
+
 	// If true, darkness will add the rss icon to the menu.
 	Enable bool `toml:"enable"`
+
+	// Timezone sets the default timezone for RSS timestamps.
+	Timezone string `toml:"timezone"`
+
+	// DefaultHour defines the hour value in RSS timestamp if one
+	// is not provided. Use the 24 hrs.
+	DefaultHour int `toml:"default_hour"`
 }
