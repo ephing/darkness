@@ -42,7 +42,7 @@ func GenerateRssFeed(conf *alpha.DarknessConfig, rssFilename string, rssDirector
 
 	// Get all pages that have dates defined, we only use those to be included in the rss feed.
 	pages := Pages(gana.Filter(func(page *yunyun.Page) bool {
-		_, dateFound := getDate(page)
+		_, dateFound := narumi.ConvertHoloscene(page.Date)
 		return dateFound
 	}, allPages))
 
@@ -76,15 +76,20 @@ func GenerateRssFeed(conf *alpha.DarknessConfig, rssFilename string, rssDirector
 			finalTitle = page.Accoutrement.RssPrefix + " " + finalTitle
 
 			// Let's update the time if needed.
-			parsedDate, _ := getDate(page)
+			parsedDate, _ := narumi.ConvertHoloscene(page.Date)
 			finalLocation, err := time.LoadLocation(conf.RSS.Timezone)
 			// Fallback to UTC
 			if err != nil {
 				finalLocation = time.UTC
 			}
+			hour, minute := parsedDate.Hour(), parsedDate.Minute()
+			if hour == 0 && minute == 0 {
+				hour = conf.RSS.DefaultHour
+				minute = 0
+			}
 			finalDate := time.Date(
 				parsedDate.Year(), parsedDate.Month(), parsedDate.Day(),
-				conf.RSS.DefaultHour, 0, 0, 0, finalLocation)
+				hour, minute, 0, 0, finalLocation)
 
 			// Create the RSS item.
 			items = append(items, rss.Item{
@@ -159,12 +164,6 @@ func GenerateRssFeed(conf *alpha.DarknessConfig, rssFilename string, rssDirector
 	logger.Info("Created rss file", "path", conf.Runtime.WorkDir.Rel(yunyun.FullPathFile(xmlTarget)))
 }
 
-// getDate takes a page and returns its date if any found.
-func getDate(page *yunyun.Page) (time.Time, bool) {
-	parsed := narumi.ConvertHoloscene(page.Date)
-	return parsed, parsed.Unix() != 0 && parsed.Day() != 31 && parsed.Year() != 2000
-}
-
 var categoryCache = make(map[string]*yunyun.Page)
 
 func getCategory(page *yunyun.Page, pages Pages) *yunyun.Page {
@@ -194,7 +193,7 @@ func (p Pages) Swap(i, j int) { p[i], p[j] = p[j], p[i] }
 func (p Pages) Less(i, j int) bool { return mustDate(p[i]).Unix() > mustDate(p[j]).Unix() }
 
 func mustDate(v *yunyun.Page) time.Time {
-	t, f := getDate(v)
+	t, f := narumi.ConvertHoloscene(v.Date)
 	if !f {
 		panic("must be date")
 	}

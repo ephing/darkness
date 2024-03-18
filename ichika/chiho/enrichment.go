@@ -4,7 +4,6 @@ import (
 	"github.com/thecsw/darkness/emilia/alpha"
 	"github.com/thecsw/darkness/emilia/alpha/roxy"
 	"github.com/thecsw/darkness/emilia/narumi"
-	"github.com/thecsw/darkness/emilia/puck"
 	"github.com/thecsw/darkness/yunyun"
 )
 
@@ -18,7 +17,6 @@ import (
 // - Lazy galleries
 // - Plugins
 func EnrichPage(conf *alpha.DarknessConfig, page *yunyun.Page) *yunyun.Page {
-	defer puck.Stopwatch("Enriched", "page", page.File).Record()
 	options := []yunyun.PageOption{
 		narumi.WithResolvedComments(),
 		narumi.WithEnrichedHeadings(),

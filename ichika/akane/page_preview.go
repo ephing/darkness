@@ -5,6 +5,7 @@ import (
 	"runtime"
 	"sync"
 	"sync/atomic"
+	"time"
 	"unicode"
 
 	"github.com/thecsw/darkness/emilia/alpha"
@@ -23,16 +24,20 @@ type pagePreviewRequest struct {
 	Time     string
 }
 
-// pagePreviewsToGenerate is a list of page previews to generate.
-var pagePreviewsToGenerate = make([]pagePreviewRequest, 0, 16)
+// pagePreviewsToGenerate is a set of page previews to generate.
+var (
+	pagePreviewsToGenerate      = sync.Map{}
+	pagePreviewsToGenerateCount = atomic.Uint32{}
+)
 
 // RequestPagePreview requests a page preview to be generated.
 func RequestPagePreview(location yunyun.RelativePathDir, title string, time string) {
-	pagePreviewsToGenerate = append(pagePreviewsToGenerate, pagePreviewRequest{
+	pagePreviewsToGenerate.Store(location, pagePreviewRequest{
 		Location: location,
 		Title:    title,
 		Time:     time,
 	})
+	pagePreviewsToGenerateCount.Add(1)
 }
 
 const (
@@ -47,11 +52,6 @@ const (
 
 // doPagePreviews generates page previews.
 func doPagePreviews(conf *alpha.DarknessConfig) {
-	// Clear the pagePreviewsToGenerate slice when we're done.
-	defer func() {
-		pagePreviewsToGenerate = pagePreviewsToGenerate[:0]
-	}()
-
 	// Let's initialize the page preview generator.
 	generator := reze.InitPreviewGenerator(
 		pagePreviewTitleFont,
@@ -71,10 +71,11 @@ func doPagePreviews(conf *alpha.DarknessConfig) {
 	}(generator)
 
 	waiting := sync.WaitGroup{}
-	waiting.Add(len(pagePreviewsToGenerate))
+	waiting.Add(int(pagePreviewsToGenerateCount.Load()))
 	skipped := atomic.Int32{}
 
 	processPagePreviewRequest := func(pagePreview pagePreviewRequest) {
+		start := time.Now()
 		// Find the path to save the preview to.
 		relativeTarget := yunyun.RelativePathFile(filepath.Join(string(pagePreview.Location), pagePreviewFilename))
 		// Skip if exists, unless forced.
@@ -91,10 +92,18 @@ func doPagePreviews(conf *alpha.DarknessConfig) {
 		target := conf.Runtime.WorkDir.Join(relativeTarget)
 		// Save the preview as a jpg.
 		if err := reze.SaveJpg(reader, string(target)); err != nil {
-			logger.Error("Saving page preview", "loc", target, "err", err)
+			logger.Error(
+				"Saving page preview",
+				"loc", target,
+				"err", err,
+			)
 			return
 		}
-		logger.Info("Generated page preview", "loc", conf.Runtime.WorkDir.Rel(target))
+		logger.Info(
+			"Generated page preview",
+			"loc", conf.Runtime.WorkDir.Rel(target),
+			"elapsed", time.Since(start),
+		)
 		waiting.Done()
 	}
 
@@ -103,10 +112,10 @@ func doPagePreviews(conf *alpha.DarknessConfig) {
 		Laborers: runtime.NumCPU(),
 	})
 
-	// Let's start going through the page preview requests.
-	for _, pagePreview := range pagePreviewsToGenerate {
-		pageGeneratorPool.Submit(pagePreview)
-	}
+	pagePreviewsToGenerate.Range(func(key, value any) bool {
+		rei.Try(pageGeneratorPool.Submit(value.(pagePreviewRequest)))
+		return true
+	})
 
 	waiting.Wait()
 

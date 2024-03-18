@@ -4,7 +4,6 @@ import (
 	"strings"
 
 	"github.com/thecsw/darkness/emilia"
-	"github.com/thecsw/darkness/emilia/puck"
 	"github.com/thecsw/darkness/yunyun"
 	"github.com/thecsw/gana"
 )
@@ -30,12 +29,11 @@ const (
 	defaultGalleryImagesPerRow uint = 3
 )
 
-// Parse parses the input string and returns a list of elements
+// Do parses the input string and returns a list of elements
 func (p ParserOrgmode) Do(
 	filename yunyun.RelativePathFile,
 	data string,
 ) *yunyun.Page {
-	defer puck.Stopwatch("Parsed", "page", filename).Record()
 
 	// Split the data into lines
 	lines := strings.Split(preprocess(data), "\n")

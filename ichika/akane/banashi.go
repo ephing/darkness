@@ -1,19 +1,16 @@
 package akane
 
 import (
-	"fmt"
-
 	"github.com/thecsw/darkness/emilia/alpha"
 )
 
 // Do starts going through the requests and processes them.
 func Do(conf *alpha.DarknessConfig) {
-	fmt.Println()
 	logger.Info("Starting to process requests...")
 
-	if len(pagePreviewsToGenerate) > 0 {
+	if pagePreviewsToGenerateCount.Load() > 0 {
 		// Do page previews generation.
-		logger.Info("Generating page previews...", "page_previews", len(pagePreviewsToGenerate))
+		logger.Info("Generating page previews...", "page_previews", pagePreviewsToGenerateCount.Load())
 		doPagePreviews(conf)
 	}
 

@@ -12,6 +12,7 @@ import (
 	"github.com/thecsw/darkness/ichika/hizuru"
 	"github.com/thecsw/darkness/ichika/kuroko"
 	"github.com/thecsw/darkness/ichika/makima"
+	"github.com/thecsw/darkness/ichika/misaka"
 	"github.com/thecsw/darkness/parse"
 	"github.com/thecsw/darkness/yunyun"
 	"github.com/thecsw/komi"
@@ -42,8 +43,7 @@ func build(conf *alpha.DarknessConfig) {
 		Laborers: runtime.NumCPU(),
 		Debug:    kuroko.DebugEnabled,
 	})
-	filesError := rei.Must(filesPool.Errors())
-	go logErrors("reading", filesError)
+	go logErrors("reading", rei.Must(filesPool.Errors()))
 
 	// Create a pool that take a files handle and parses it out into yunyun pages.
 	parserPool := komi.NewWithSettings(komi.Work(makima.Woof.Parse), &komi.Settings{
@@ -65,8 +65,7 @@ func build(conf *alpha.DarknessConfig) {
 		Laborers: runtime.NumCPU(),
 		Debug:    kuroko.DebugEnabled,
 	})
-	writersErrors := rei.Must(writerPool.Errors())
-	go logErrors("writer", writersErrors)
+	go logErrors("writer", rei.Must(writerPool.Errors()))
 
 	// Connect all the pools between each other, so the relationship is as follows,
 	//
@@ -87,12 +86,12 @@ func build(conf *alpha.DarknessConfig) {
 	rei.Try(parserPool.Connect(exporterPool))
 	rei.Try(exporterPool.Connect(writerPool))
 
-	// Record the start time.
-	start := time.Now()
-
 	// Find all the files that need to be parsed.
 	inputFilenames := make(chan yunyun.FullPathFile, 8)
 	go hizuru.FindFilesByExt(conf, inputFilenames)
+
+	// Record the start time.
+	start := time.Now()
 
 	// Submit all the files to the pool.
 	for inputFilename := range inputFilenames {
@@ -115,6 +114,11 @@ func build(conf *alpha.DarknessConfig) {
 	fmt.Print("\r\033[2K")
 
 	fmt.Printf("Processed %d files in %d ms\n", exporterPool.JobsSucceeded(), finish.Sub(start).Milliseconds())
+
+	// Let's process the misaka report if user wants to see it.
+	if kuroko.BuildReport {
+		misaka.WriteReport(conf)
+	}
 }
 
 // logErrors is a helper function that logs errors from a pool. It is meant to be
